@@ -1,4 +1,5 @@
 import Snakebird.Delab
+open Lean
 
 elab t1:tactic " ⟨|⟩ " t2:tactic : tactic =>
    try Lean.Elab.Tactic.evalTactic t1
@@ -8,13 +9,19 @@ elab "fail" m:term : tactic =>
   throwError m
 
 macro "complete" : tactic => 
-  `(apply Game.completable.completed; simp only [Game.completed] ⟨|⟩ fail "Game is not complete.")
+  `((apply Game.completable.completed; simp only [Game.completed]) ⟨|⟩ fail "Game is not complete.")
 
-syntax "move" term term : tactic
+open Lean Elab.Tactic Game.Move in
+elab (name := move) "move " i:num d:term : tactic => do
+  evalTactic (← `(tactic| refine Game.completable.move (m := Game.Move.mk $i $d) rfl ?_))
 
-macro_rules 
-  | `(tactic| move $i:term $d:term) => do
-    let g' ← getGoalState
-
-
+def test :=
+◎╺━0•••┆
+▦▦▦▦▦▦▦┆
+▦▦▦••▦•┆
+∼∼∼∼∼∼∼┆
+  
+  
+  
+  
 

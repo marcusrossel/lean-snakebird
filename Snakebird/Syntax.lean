@@ -26,9 +26,9 @@ syntax num : map_field -- Snake head
 
 syntax "∼" : water_field
 
-syntax map_field+ "|" linebreak : map_row 
-syntax water_field+ : water_row 
-syntax:max map_row* water_row : term 
+syntax map_field+ "┆" linebreak : map_row 
+syntax water_field+ "┆" : water_row 
+syntax:max map_row+ water_row : term 
 
 inductive Field.SnakeBody
   | vertical
@@ -229,12 +229,12 @@ def fieldFromSyntax : Syntax → MacroM (List Field)
   | _ => Macro.throwError "Unknown map field."
 
 def fieldRowFromSyntax : Syntax → MacroM (List Field)
-  | `(map_row|$fields:map_field*|
-  ) => do (← Array.mapM fieldFromSyntax fields).data.join
+  | `(map_row|$fields:map_field*┆
+    ) => do (← Array.mapM fieldFromSyntax fields).data.join
   | _ => Macro.throwError "Unknown map row."
 
 def waterFieldCount : Syntax → MacroM Nat 
-  | `(water_row|$f:water_field*) => f.data.length
+  | `(water_row|$f:water_field*┆) => pure $ f.data.length
   | _ => Macro.throwError "Unknown water row."
 
 macro_rules

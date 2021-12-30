@@ -1,15 +1,6 @@
 import Lean
 open Lean
 
-inductive _Debug (α) 
-  | value (a : α)
-  | message (m : String) 
-
-instance [Inhabited α] : Inhabited (_Debug α) where 
-  default := _Debug.value (Inhabited.default)
-
-instance : Coe α (_Debug α) := ⟨λ a => _Debug.value a⟩
-
 def List.isUnique [BEq α] (l : List α) : Bool :=
   l.length == l.eraseDups.length
 
@@ -25,9 +16,16 @@ def List.indicesWhere (l : List α) (p : α → Bool) : List Nat :=
 def Int.abs (i : Int) : Int :=
   if i < 0 then -i else i
 
--- TODO: Make this non-partial.
-partial def Nat.digits (n : Nat) : List Nat :=
-  if n < 10 then [n] else (n / 10).digits ++ [n % 10]
+theorem Nat.le_of_not_lt {a b : Nat} (h : ¬ b < a) : a ≤ b := sorry
+
+theorem Nat.div_decreasing {m n : Nat} (hn : 1 < n) (hm : n ≤ m) : (m / n) < m := sorry
+
+def Nat.digits (n : Nat) : List Nat :=
+  if h : n < 10 then [n] else (n / 10).digits ++ [n % 10]
+termination_by measure id
+decreasing_by 
+  simp only [measure, id, invImage, InvImage, Nat.lt_wfRel]
+  apply div_decreasing <;> simp [Nat.le_of_not_lt h]
   
 instance : Quote Int where
   quote (i : Int) := 

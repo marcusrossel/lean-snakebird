@@ -5,7 +5,7 @@ inductive Dir -- Direction
   | down
   | right
   | left
-deriving BEq
+deriving Inhabited, BEq
 
 def Dir.all : List Dir := [Dir.up, Dir.down, Dir.right, Dir.left]
 
@@ -119,7 +119,7 @@ instance : ToString Game where
 def isSnakeField (g : Game) (p : Pos) : Bool :=
   g.snakes.any (·.fields.contains p)
 
-partial def floatingSnakes (g : Game) : _Debug $ List Nat :=
+partial def floatingSnakes (g : Game) : List Nat :=
   let onPlatform := g.snakes.indicesWhere (·.below.any g.map.isPlatformPos)
   let stable := stableSnakes g onPlatform
   g.snakes.indices.filter (!stable.contains ·)
@@ -173,14 +173,11 @@ def Move.Result.getD (r : Move.Result) (g : Game) : Game :=
 
 open Move
 
-partial def applyGravity (g : Game) : _Debug Result :=
-match g.floatingSnakes with
-| _Debug.message m => _Debug.message m
-| _Debug.value VALUE => 
-  if VALUE.isEmpty
+partial def applyGravity (g : Game) :Result :=
+  if g.floatingSnakes.isEmpty
   then Result.success g 
   else
-    let snakes' := g.snakes.enum.map λ (i, s) => if VALUE.contains i then s.shift Dir.down else s
+    let snakes' := g.snakes.enum.map λ (i, s) => if g.floatingSnakes.contains i then s.shift Dir.down else s
     let g' := { g .. with snakes := snakes' }
     let deaths := g'.snakes.enum.filterMap λ (i, s) =>
       if s.fields.any (g.map.saws.contains ·) then Error.fellOnSaw i
@@ -190,16 +187,15 @@ match g.floatingSnakes with
     then applyGravity g'
     else Result.failure deaths
 
-partial def move (g : Game) (m : Move) : _Debug Result := do
+partial def move (g : Game) (m : Move) : Result := do
   match g.snakes.get? m.snakeIdx with
   | none => Result.failure [Error.unknownSnake m.snakeIdx]
   | some s =>
     match move' g s m with
     | Result.failure e => Result.failure e
     | Result.success g' => applyGravity g'
-    | _Debug.message m => _Debug.message m
 where
-  move' (g : Game) (s : Snake) (m : Move) : _Debug Result :=
+  move' (g : Game) (s : Snake) (m : Move) : Result :=
     let s' := s.move m.dir
     let map := g.map
     let h' := s'.head
