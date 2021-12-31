@@ -11,15 +11,19 @@ elab "fail" m:term : tactic =>
 macro "complete" : tactic => 
   `((apply Game.completable.completed; simp only [Game.completed]) ⟨|⟩ fail "Game is not complete.")
 
-open Lean Elab.Tactic Game.Move in
-elab (name := move) "move " i:num d:term : tactic => do
-  evalTactic (← `(tactic| refine Game.completable.move (m := Game.Move.mk $i $d) rfl ?_))
+macro "move " i:num d:term : tactic => 
+  `(tactic| refine Game.completable.move (m := Game.Move.mk $i $d) rfl ?_)
 
 def test :=
 ◎╺━0•••┆
 ▦▦▦▦▦▦▦┆
 ▦▦▦••▦•┆
 ∼∼∼∼∼∼∼┆
+
+theorem test_completable : test.completable := by
+  move 0 Dir.right
+  move 0 Dir.right
+  sorry
   
   
   

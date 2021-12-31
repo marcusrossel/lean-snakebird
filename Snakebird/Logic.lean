@@ -1,4 +1,4 @@
-import Snakebird.Extensions
+import Snakebird.E
 
 inductive Dir -- Direction
   | up
@@ -119,34 +119,20 @@ instance : ToString Game where
 def isSnakeField (g : Game) (p : Pos) : Bool :=
   g.snakes.any (·.fields.contains p)
 
-partial def floatingSnakes (g : Game) : List Nat :=
-  let onPlatform := g.snakes.indicesWhere (·.below.any g.map.isPlatformPos)
-  let stable := stableSnakes g onPlatform
-  g.snakes.indices.filter (!stable.contains ·)
+def floatingSnakes (g : Game) : List Nat :=
+  let allSnakes := g.snakes.enum
+  let initFloating := allSnakes.filter λ (_, s) => !s.below.any g.map.isPlatformPos
+  transFloating allSnakes initFloating |>.map Prod.fst
 where 
-  stableSnakes (g : Game) (stable : List Nat) : List Nat :=
-    let snakes := stable.filterMap (g.snakes.get? ·) 
-    let new := g.snakes.indicesWhere' λ i s => stable.notElem i && (s.below.any λ b => snakes.any (·.fields.contains b))
-    if new.isEmpty then stable else stableSnakes g (stable ++ new)
-
--- The list of snakes that also need to move, if the snake at a given
--- index moves in a given direction.
-partial def snakesLinkedToMove (g : Game) (idx : Nat) (d : Dir) : List Nat :=
-  match g.snakes.get? idx with
-  | none => []
-  | some s => 
-    let h' := s.head.move d
-    let is := g.snakes.indicesWhere (·.fields.contains h')
-    is ++ (is.map λ i => snakesLinkedToShift g i d).join
-where 
-  snakesLinkedToShift (g : Game) (idx : Nat) (d : Dir) : List Nat :=
-    match g.snakes.get? idx with
-    | none => []
-    | some s =>  
-      let f' := (s.shift d).fields
-      let idxs := g.snakes.indicesWhere λ s' => s'.fields.any (f'.contains ·)
-      let idxs' := idxs.erase idx -- We have to remove the snake in consideration, otherwise we can get infinite recursion.
-      idxs' ++ (idxs'.map λ i => snakesLinkedToShift g i d).join 
+  transFloating (all : List $ Nat × Snake) (floating : List $ Nat × Snake) : List (Nat × Snake) :=
+    let stableSnakes := all.filterMap λ (i, s) => if floating.any (·.fst == i) then none else some s
+    let stableFields := stableSnakes.map Snake.fields |>.join
+    let newStable := floating.filter λ (_, s) => s.below.any (stableFields.contains ·)
+    if newStable.isEmpty 
+    then floating 
+    else transFloating all $ List.subtract floating newStable
+  termination_by measure (·.snd.length)
+  decreasing_by sorry -- apply List.subtract_decreasing
 
 structure Move where
   snakeIdx : Nat
@@ -173,7 +159,33 @@ def Move.Result.getD (r : Move.Result) (g : Game) : Game :=
 
 open Move
 
-partial def applyGravity (g : Game) :Result :=
+-- The list of snakes that also need to move, if the snake at a given
+-- index moves in a given direction.
+def snakesLinkedToMove (g : Game) (m : Move) : List Nat :=
+  match g.snakes.get? m.snakeIdx with
+  | none => []
+  | some s => 
+    let head' := s.head.move m.dir
+    match g.snakes.findIndex? (·.fields.contains head') with -- There can be at most one snake that contains a specific field.
+    | none => []
+    | some i => 
+      let candidates := g.snakes.enum.eraseIdx i
+      i :: snakesLinkedToShift candidates i m.dir
+where 
+  snakesLinkedToShift (candidates : List $ Nat × Snake) (idx : Nat) (d : Dir) : List Nat :=
+    match candidates.find? (·.fst == idx) with
+    | none => []
+    | some (_, s) => -- This index is the given idx.  
+      let fields' := (s.shift d).fields
+      let affected := candidates.filter λ (_, s') => s'.fields.any (fields'.contains ·)
+      if affected.isEmpty then [] else 
+        let candidates' := candidates.subtract affected
+        let linked' := affected.map (snakesLinkedToShift candidates' ·.fst d)
+        affected.map (·.fst) ++ linked'.join
+  termination_by measure (·.fst.length)
+  decreasing_by sorry -- apply List.subtract_decreasing
+
+def applyGravity (g : Game) : Result :=
   if g.floatingSnakes.isEmpty
   then Result.success g 
   else
@@ -186,8 +198,10 @@ partial def applyGravity (g : Game) :Result :=
     if deaths.isEmpty 
     then applyGravity g'
     else Result.failure deaths
+  termination_by measure λ g => g.snakes.foldl (init := 0) λ r s => r + s.tail.y.natAbs
+  decreasing_by sorry
 
-partial def move (g : Game) (m : Move) : Result := do
+def move (g : Game) (m : Move) : Result := do
   match g.snakes.get? m.snakeIdx with
   | none => Result.failure [Error.unknownSnake m.snakeIdx]
   | some s =>
@@ -210,7 +224,7 @@ where
     else if g.isSnakeField h' then
       -- If the head runs into a snake body that does not belong to the same snake,
       -- check if the other snake/s can be moved, and if so move it/them as well.
-      let moveGroup := g.snakesLinkedToMove m.snakeIdx m.dir
+      let moveGroup := g.snakesLinkedToMove m
       if moveGroup.contains m.snakeIdx 
       then Result.failure [Error.blockedBySnake m.snakeIdx m.snakeIdx] -- The snake is blocked by itself.
       else
