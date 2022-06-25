@@ -2,4 +2,10 @@ import Lake
 open Lake DSL
 
 package lean_snakebird 
-lean_lib Snakebird
+
+lean_lib Snakebird 
+
+@[defaultTarget]
+lean_exe snakebird {
+  root := `Main
+}
