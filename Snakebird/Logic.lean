@@ -1,4 +1,4 @@
-import Snakebird.E
+import Snakebird.Extensions
 
 inductive Dir -- Direction
   | up
@@ -8,6 +8,12 @@ inductive Dir -- Direction
 deriving Inhabited, BEq
 
 def Dir.all : List Dir := [Dir.up, Dir.down, Dir.right, Dir.left]
+
+def Dir.opposite : Dir → Dir
+  | up    => down
+  | down  => up
+  | right => left
+  | left  => right
 
 instance : ToString Dir where
   toString (d : Dir) :=
@@ -131,7 +137,7 @@ where
     if newStable.isEmpty 
     then floating 
     else transFloating all $ List.subtract floating newStable
-  termination_by measure (·.snd.length)
+  termination_by _ => floating.length
   decreasing_by sorry -- apply List.subtract_decreasing
 
 structure Move where
@@ -182,7 +188,7 @@ where
         let candidates' := candidates.subtract affected
         let linked' := affected.map (snakesLinkedToShift candidates' ·.fst d)
         affected.map (·.fst) ++ linked'.join
-  termination_by measure (·.fst.length)
+  termination_by _ => candidates.length
   decreasing_by sorry -- apply List.subtract_decreasing
 
 def applyGravity (g : Game) : Result :=
@@ -198,10 +204,10 @@ def applyGravity (g : Game) : Result :=
     if deaths.isEmpty 
     then applyGravity g'
     else Result.failure deaths
-  termination_by measure λ g => g.snakes.foldl (init := 0) λ r s => r + s.tail.y.natAbs
+  termination_by _ => g.snakes.foldl (init := 0) λ r s => r + s.tail.y.natAbs
   decreasing_by sorry
 
-def move (g : Game) (m : Move) : Result := do
+def move (g : Game) (m : Move) : Result := 
   match g.snakes.get? m.snakeIdx with
   | none => Result.failure [Error.unknownSnake m.snakeIdx]
   | some s =>
@@ -249,7 +255,7 @@ where
       -- If the move was trivial, update the snake state.
       Result.success { g .. with snakes := g.snakes.set m.snakeIdx s' }
 
-def completed (g : Game) : Bool :=
+def completed (g : Game) : Prop :=
   g.map.fruit.isEmpty && g.snakes.isEmpty
 
 open Move.Result

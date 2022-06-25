@@ -26,49 +26,33 @@ syntax num : map_field -- Snake head
 
 syntax "∼" : water_field
 
-syntax map_field+ "┆" linebreak : map_row 
-syntax water_field+ "┆" : water_row 
+syntax map_field+ linebreak : map_row 
+syntax water_field+ : water_row 
 syntax:max map_row+ water_row : term 
 
 inductive Field.SnakeBody
   | vertical
   | horizontal
-  | cornerBottomToRight
-  | cornerTopToRight
-  | cornerLeftToBottom
-  | cornerLeftToTop
-deriving BEq
+  | corner («from» to : Dir)
+deriving BEq, Inhabited
 
 -- If we enter the given snake body by moving in the given direction,
 -- this function returns the direction in which the next snake body
 -- must be located (i.e. where the other entrance/exit of this body
 -- points). If we enter from an invalid direction, `none` is returned.
 open Field.SnakeBody Dir in
-def Field.SnakeBody.outDirForIn : SnakeBody → Dir → Option Dir
-  | vertical,            up    => up
-  | vertical,            down  => down
-  | vertical,            left  => none
-  | vertical,            right => none
-  | horizontal,          up    => none
-  | horizontal,          down  => none
-  | horizontal,          left  => left
-  | horizontal,          right => right
-  | cornerBottomToRight, up    => right
-  | cornerBottomToRight, down  => none
-  | cornerBottomToRight, left  => down
-  | cornerBottomToRight, right => none
-  | cornerTopToRight,    up    => none
-  | cornerTopToRight,    down  => right
-  | cornerTopToRight,    left  => up
-  | cornerTopToRight,    right => none
-  | cornerLeftToBottom,  up    => left
-  | cornerLeftToBottom,  down  => none
-  | cornerLeftToBottom,  left  => down
-  | cornerLeftToBottom,  right => none
-  | cornerLeftToTop,     up    => none
-  | cornerLeftToTop,     down  => left
-  | cornerLeftToTop,     left  => none
-  | cornerLeftToTop,     right => up
+def Field.SnakeBody.outDirForIn (b : SnakeBody) («from» : Dir) : Option Dir :=
+  match b, «from» with
+  | vertical,   up    => up
+  | vertical,   down  => down
+  | vertical,   _     => none
+  | horizontal, left  => left
+  | horizontal, right => right
+  | horizontal, _     => none
+  | corner from' to, «from» => 
+    if from' == «from» then to
+    else if to == from.opposite then from'.opposite
+    else none
 
 -- The snake tails are named in a similar style to `Field.SnakeBody.outDirForIn`.
 -- E.g. a `snakeTail Dir.up` is the tail character you should see when moving from 
@@ -94,16 +78,17 @@ instance : ToString Field where
   | saw => "✸"
   | goal => "◎"
   | fruit => "*"
-  | snakeBody SnakeBody.vertical => "┃"
-  | snakeBody SnakeBody.horizontal => "━"
-  | snakeBody SnakeBody.cornerBottomToRight => "┏"
-  | snakeBody SnakeBody.cornerTopToRight => "┗"
-  | snakeBody SnakeBody.cornerLeftToBottom => "┓"
-  | snakeBody SnakeBody.cornerLeftToTop => "┛"
-  | snakeTail Dir.up => "╻"
-  | snakeTail Dir.down => "╹"
-  | snakeTail Dir.left => "╸"
-  | snakeTail Dir.right => "╺"
+  | snakeBody .vertical => "┃"
+  | snakeBody .horizontal => "━"
+  | snakeBody (.corner .up .right) => "┏"
+  | snakeBody (.corner .down .right) => "┗"
+  | snakeBody (.corner .left .down) => "┓"
+  | snakeBody (.corner .right .up) => "┛"
+  | snakeBody (.corner _ _) => "INVALID CORNER"
+  | snakeTail .up => "╻"
+  | snakeTail .down => "╹"
+  | snakeTail .left => "╸"
+  | snakeTail .right => "╺"
   | snakeHead n => s!"{n}"
 
 /- -------------------------------------------------------------------------------------------------- -/
@@ -112,13 +97,13 @@ def Map.fromFields (fs : List (Pos × Field)) : MacroM Map := do
   let goalPos := fs.filterMap λ (p, f) => match f with | Field.goal => some p | _ => none
   match goalPos with
   | [] => Macro.throwError "Missing goal portal." 
-  | g :: (g' :: tl) => Macro.throwError "Found more than one goal portal."
+  | _ :: (_ :: _) => Macro.throwError "Found more than one goal portal."
   | g :: [] =>
     return {
       goal  := g,
-      rocks := fs.filterMap λ (p, f) => if f == Field.rock  then some p else none,
-      fruit := fs.filterMap λ (p, f) => if f == Field.fruit then some p else none,
-      saws  := fs.filterMap λ (p, f) => if f == Field.saw   then some p else none
+      rocks := fs.filterMap λ (p, f) => if f == .rock  then some p else none,
+      fruit := fs.filterMap λ (p, f) => if f == .fruit then some p else none,
+      saws  := fs.filterMap λ (p, f) => if f == .saw   then some p else none
     }
 
 partial def Game.snakesFromFields (fs : List (Pos × Field)) : MacroM (List Snake) := do
@@ -204,43 +189,45 @@ instance : Quote Game where
 
 open Field.SnakeBody in
 def fieldFromSyntax : Syntax → MacroM (List Field)
-  | `(map_field| •) => [Field.air]
-  | `(map_field| ▦) => [Field.rock]
-  | `(map_field| ✸) => [Field.saw]
-  | `(map_field| ◎) => [Field.goal]
-  | `(map_field| *) => [Field.fruit]
-  | `(map_field| ┃) => [Field.snakeBody vertical]
-  | `(map_field| ━) => [Field.snakeBody horizontal]
-  | `(map_field| ┏) => [Field.snakeBody cornerBottomToRight]
-  | `(map_field| ┗) => [Field.snakeBody cornerTopToRight]
-  | `(map_field| ┓) => [Field.snakeBody cornerLeftToBottom]
-  | `(map_field| ┛) => [Field.snakeBody cornerLeftToTop]
-  | `(map_field| ╻) => [Field.snakeTail Dir.up]
-  | `(map_field| ╹) => [Field.snakeTail Dir.down]
-  | `(map_field| ╸) => [Field.snakeTail Dir.right]
-  | `(map_field| ╺) => [Field.snakeTail Dir.left]
-  | `(map_field| $n:numLit) => 
-    match n.isNatLit? with
+  | `(map_field| •) => return [.air]
+  | `(map_field| ▦) => return [.rock]
+  | `(map_field| ✸) => return [.saw]
+  | `(map_field| ◎) => return [.goal]
+  | `(map_field| *) => return [.fruit]
+  | `(map_field| ┃) => return [.snakeBody vertical]
+  | `(map_field| ━) => return [.snakeBody horizontal]
+  | `(map_field| ┏) => return [.snakeBody (.corner .up .right)]
+  | `(map_field| ┗) => return [.snakeBody (.corner .down .right)]
+  | `(map_field| ┓) => return [.snakeBody (.corner .right .down)]
+  | `(map_field| ┛) => return [.snakeBody (.corner .right .up)]
+  | `(map_field| ╻) => return [.snakeTail .up]
+  | `(map_field| ╹) => return [.snakeTail .down]
+  | `(map_field| ╸) => return [.snakeTail .right]
+  | `(map_field| ╺) => return [.snakeTail .left]
+  | `(map_field| $s:num) => 
+    match s.isNatLit? with
     | none => Macro.throwError "Unknown map field."
     | some n => 
       if n >= 0 && n <= 10 
-      then n.digits.map Field.snakeHead
+      then return n.digits.map Field.snakeHead
       else Macro.throwError "Sneak heads have to be single digits." 
   | _ => Macro.throwError "Unknown map field."
 
 def fieldRowFromSyntax : Syntax → MacroM (List Field)
-  | `(map_row|$fields:map_field*┆
-    ) => do (← Array.mapM fieldFromSyntax fields).data.join
+  | `(map_row|$fields:map_field* 
+     ) => do return (← Array.mapM fieldFromSyntax fields).data.join
   | _ => Macro.throwError "Unknown map row."
 
 def waterFieldCount : Syntax → MacroM Nat 
-  | `(water_row|$f:water_field*┆) => pure $ f.data.length
+  | `(water_row|$fields:water_field*) => pure $ fields.data.length
   | _ => Macro.throwError "Unknown water row."
 
 macro_rules
   | `($rows:map_row* $water:water_row) => do
     let fields ← Array.mapM fieldRowFromSyntax rows
     let waterLength ← waterFieldCount water
+    for row in rows do
+      dbg_trace s!"{row} ####"
     unless fields.all (·.length == waterLength) 
       do Macro.throwError "All rows must have the same length."
-    quote (← Game.fromFields fields.data)
+    return quote (← Game.fromFields fields.data)
