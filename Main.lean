@@ -78,13 +78,5 @@ partial def runLoop (state : State) : IO Unit := do
   | none =>                    _ := 0 -- noop    
   runLoop state
 
-def initial : Game := {
-  map := ⟨⟨3, 5⟩, [⟨0, 2⟩, ⟨0, 3⟩, ⟨1, 2⟩, ⟨1, 6⟩], [⟨0, 6⟩, ⟨0, 7⟩, ⟨0, 8⟩], []⟩,
-  snakes := [
-    ⟨⟨1, 3⟩, [⟨2, 3⟩, ⟨2, 2⟩]⟩,
-    ⟨⟨2, 4⟩, [⟨3, 4⟩, ⟨3, 3⟩]⟩
-  ]
-}
-
 def main : IO Unit :=
-  runLoop { game := initial, history := { initialGame := initial } }
+  runLoop { game := level3, history := { initialGame := level3 } }

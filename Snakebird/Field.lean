@@ -9,7 +9,7 @@ inductive Field
   | fruit
   | snake (src : Dir) (dst : Option Dir)
   | head (idx : Nat)
-deriving Inhabited
+deriving BEq, Inhabited
 
 open Dir in
 instance : ToString Field where

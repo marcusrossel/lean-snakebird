@@ -17,3 +17,6 @@ def List.subtract [BEq α] : List α → List α → List α
     if l.elem hd 
     then subtract tl l
     else hd :: subtract tl l
+
+partial def Nat.digits (n : Nat) : List Nat :=
+  if n < 10 then [n] else (n / 10).digits ++ [n % 10]
