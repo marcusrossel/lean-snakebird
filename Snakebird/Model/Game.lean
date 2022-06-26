@@ -1,5 +1,5 @@
-import Snakebird.Snake
-import Snakebird.Map
+import Snakebird.Model.Snake
+import Snakebird.Model.Map
 
 structure Game where
   map : Map
@@ -25,7 +25,7 @@ where
       s.below.any (stableFields.contains ·)
     if newStable.isEmpty then floating else transFloating all (floating.subtract newStable)
 
-def isCompleted (g : Game) : Prop :=
+def isCompleted (g : Game) : Bool :=
   g.map.fruit.isEmpty && g.snakes.isEmpty
 
 end Game

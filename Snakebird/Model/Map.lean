@@ -1,4 +1,4 @@
-import Snakebird.Basic
+import Snakebird.Model.Basic
 
 structure Map where
   goal  : Pos

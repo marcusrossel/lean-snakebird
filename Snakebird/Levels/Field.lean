@@ -1,4 +1,4 @@
-import Snakebird.Game
+import Snakebird.Model
 
 inductive Field
   | air
@@ -31,7 +31,7 @@ instance : ToString Field where
   | .snake left  none => "╺"
   | .snake right none => "╸"
   | .head idx => s!"{idx}"
-  | .snake _ _ => panic! "Invalid snake field."
+  | .snake .. => panic! "Invalid snake field."
 
 def Snake.fields (s : Snake) (idx : Nat) : List (Pos × Field) := Id.run do
   let mut fields : List (Pos × Field) := [(s.head, .head idx)]
@@ -72,7 +72,8 @@ def Game.fields (g : Game) : Array (Array Field) := Id.run do
   return rows.reverse
 
 instance : ToString Game where
-  toString g := 
-    g.fields.foldl (init := "") fun result row =>
-      let row := row.map toString |>.foldl (init := "") String.append
-      result ++ row ++ "\n"
+  toString game := 
+    game.fields.foldl (init := "") fun result row => Id.run do
+      let mut row := row.map toString |>.foldl (init := "") String.append
+      unless game.map.goalIsUnlocked do row := row.replace (toString Field.goal) "◍"
+      return result ++ row ++ "\n"

@@ -1,4 +1,4 @@
-import Snakebird.Move
+import Snakebird.Model.Move
 
 -- The list of snakes that also need to move, if the snake at a given
 -- index moves in a given direction.

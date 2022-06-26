@@ -1,4 +1,4 @@
-import Snakebird.Field
+import Snakebird.Levels.Field
 import Lean
 
 open Lean

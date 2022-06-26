@@ -1,3 +1,2 @@
-import Snakebird.Logic
-import Snakebird.Field
+import Snakebird.Model
 import Snakebird.Levels
