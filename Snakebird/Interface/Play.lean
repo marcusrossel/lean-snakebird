@@ -2,17 +2,21 @@ import Snakebird.Levels
 
 namespace Play
 
+def commandPalette := "\n--------------------------------\n\n       w : up\n       a : left\n       s : down\n       d : right\n       q : undo move\n       e : select next snake\n<number> : select snake <number>\n restart : restart level\n    exit : exit to menu\n"
+
 structure State.History where
   initialGame : Game
   moves : List Move
 
 structure State where
+  levelNumber : Nat
   game : Game
   selectedSnake : Nat
   errorMessage : String
   history : State.History
 
-def State.fromGame (game : Game) : State := {
+def State.fromGame (game : Game) (levelNumber : Nat) : State := {
+  levelNumber := levelNumber,
   game := game,
   selectedSnake := 0,
   errorMessage := "",
@@ -50,8 +54,10 @@ def Command.fromString (s : String) : Option Command :=
 
 def refreshDisplay (state : State) : IO Unit := do
   dbg_trace ← IO.Process.run { cmd := "clear" }
+  IO.println s!"Level {state.levelNumber}\n"
   IO.println state.game
-  IO.println s!"Selected Snake: {state.selectedSnake}\n"
+  IO.println s!"Selected Snake: {state.selectedSnake}"
+  IO.println commandPalette
   if !state.errorMessage.isEmpty then IO.println state.errorMessage
   if state.game.isCompleted then IO.println "Goal accomplished 🎉\n"
   IO.print "Command: "

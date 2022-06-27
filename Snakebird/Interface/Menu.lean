@@ -4,35 +4,51 @@ namespace Menu
 
 def banner := "  _                                        _        _     _         _ \n | |                                      | |      | |   (_)       | |\n | | ___  __ _ _ __ ______ ___ _ __   __ _| | _____| |__  _ _ __ __| |\n | |/ _ \\/ _` | \'_ \\______/ __| \'_ \\ / _` | |/ / _ \\ \'_ \\| | \'__/ _` |\n | |  __/ (_| | | | |     \\__ \\ | | | (_| |   <  __/ |_) | | | | (_| |\n |_|\\___|\\__,_|_| |_|     |___/_| |_|\\__,_|_|\\_\\___|_.__/|_|_|  \\__,_|\n"
 
+def commandPalette := "\n---------------------------\n\n    w : move selection up\n    s : move selection down\nENTER : select"
+
+inductive Selection
+  | exit 
+  | instructions
+  | level (idx : Nat)
+deriving BEq
+
+def Selection.next : Selection → Selection
+  | exit => .instructions
+  | instructions => if levels.length > 0 then .level 0 else .exit
+  | level idx => if idx + 1 < levels.length then .level (idx + 1) else .exit
+
+def Selection.previous : Selection → Selection
+  | exit => if levels.length > 0 then .level (levels.length - 1) else .instructions
+  | instructions => .exit
+  | level idx => if idx > 0 then .level (idx - 1) else .instructions
+
 inductive Command
-  | move (n : Int)
+  | next
+  | previous
   | select
 
 def Command.fromString (s : String) : Option Command :=
   match s.toLower with
   | ""  => some .select
-  | "w" => some (.move (-1 : Int))
-  | "s" => some (.move 1)
+  | "w" => some .previous
+  | "s" => some .next
   | _   => none
 
-def refreshDisplay (selection : Nat) : IO Unit := do
+def refreshDisplay (selection : Selection) : IO Unit := do
   dbg_trace ← IO.Process.run { cmd := "clear" }
   IO.println banner
-  IO.println <| (if selection == 0 then "> " else "  ") ++ "Exit"
+  IO.println <| (if selection == .exit         then "> " else "  ") ++ "Exit"
+  IO.println <| (if selection == .instructions then "> " else "  ") ++ "Instructions"
   for levelIdx in [0:levels.length] do
-    IO.println <| (if selection == levelIdx + 1 then "> " else "  ") ++ s!"Level {levelIdx}"
+    IO.println <| (if selection == .level levelIdx then "> " else "  ") ++ s!"Level {levelIdx}"
+  IO.println commandPalette
   IO.print "\nCommand: " 
 
-partial def menu (selection : Nat) : IO (Option Nat) := do
+partial def menu (selection : Selection := .exit) : IO Selection := do
   refreshDisplay selection
   let input ← (← IO.getStdin).getLine
   match Command.fromString input.trim with
-  | some (.move n) => 
-    let mod : Int := levels.length + 1
-    let selection := Int.toNat <| (selection + n + mod) % mod
-    menu selection
-  | some .select =>
-    match selection with
-    | 0 => return none
-    | levelIdx + 1 => return levelIdx
+  | some .next => menu selection.next
+  | some .previous => menu selection.previous
+  | some .select => return selection
   | none => menu selection
