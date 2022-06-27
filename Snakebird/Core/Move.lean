@@ -1,4 +1,4 @@
-import Snakebird.Model.Game
+import Snakebird.Core.Game
 
 structure Move where
   snakeIdx : Nat

@@ -1,4 +1,4 @@
-import Snakebird.Model.Basic
+import Snakebird.Core.Basic
 
 structure Snake where
   head : Pos

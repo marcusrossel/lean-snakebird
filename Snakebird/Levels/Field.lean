@@ -1,4 +1,4 @@
-import Snakebird.Model
+import Snakebird.Core
 
 inductive Field
   | air

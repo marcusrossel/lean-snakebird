@@ -1,4 +1,4 @@
-import Snakebird.Model.Extensions
+import Snakebird.Core.Extensions
 
 inductive Dir
   | up

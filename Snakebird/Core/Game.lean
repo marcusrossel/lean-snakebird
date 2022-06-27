@@ -1,5 +1,5 @@
-import Snakebird.Model.Snake
-import Snakebird.Model.Map
+import Snakebird.Core.Snake
+import Snakebird.Core.Map
 
 structure Game where
   map : Map
