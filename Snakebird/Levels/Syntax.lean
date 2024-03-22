@@ -7,16 +7,16 @@ def Map.fromFields (fields : List (Pos × Field)) : MacroM Map := do
   let mut goals : List Pos := []
   let mut rocks : List Pos := []
   let mut fruit : List Pos := []
-  let mut saws  : List Pos := [] 
+  let mut saws  : List Pos := []
   for ⟨pos, field⟩ in fields do
     match field with
-    | .goal =>  goals := goals ++ [pos] 
+    | .goal =>  goals := goals ++ [pos]
     | .rock =>  rocks := rocks ++ [pos]
     | .fruit => fruit := fruit ++ [pos]
     | .saw =>   saws  := saws  ++ [pos]
     | _ => continue
   match goals with
-  | []            => Macro.throwError "Missing goal portal." 
+  | []            => Macro.throwError "Missing goal portal."
   | _ :: (_ :: _) => Macro.throwError "Found more than one goal portal."
   | goal :: []    => return { goal := goal, rocks := rocks, fruit := fruit, saws := saws }
 
@@ -25,10 +25,10 @@ def Map.fromFields (fields : List (Pos × Field)) : MacroM Map := do
 partial def Game.snakesFromFields (fs : List (Pos × Field)) : MacroM (List Snake) := do
   let mut heads : List (Pos × Nat) := fs.filterMap λ (p, f) => match f with | .head n => (p, n) | _ => none
   let headIDs := heads.map Prod.snd
-  unless headIDs.isUnique 
-    do Macro.throwError "Duplicate snake ID." 
-  unless headIDs.all λ h => h ≥ 0 ∧ h ≤ 9 
-    do Macro.throwError "Invalid snake ID (has to be single digit)." 
+  unless headIDs.isUnique
+    do Macro.throwError "Duplicate snake ID."
+  unless headIDs.all λ h => h ≥ 0 ∧ h ≤ 9
+    do Macro.throwError "Invalid snake ID (has to be single digit)."
   let mut remainingFs : List (Pos × Field) := fs
   let mut snakes : List Snake := []
   for idx in List.range 10 do
@@ -43,18 +43,18 @@ partial def Game.snakesFromFields (fs : List (Pos × Field)) : MacroM (List Snak
   -- Check that snake heads started at 0 and had no gaps.
   unless heads.isEmpty do Macro.throwError "Snake heads need to be numbered from 0."
   -- Check that there are no remaining snake parts (no snake is headless).
-  unless remainingFs.all λ (_, f) => 
-    match f with 
-    | .snake .. => false 
+  unless remainingFs.all λ (_, f) =>
+    match f with
+    | .snake .. => false
     | _ => true
   do Macro.throwError "Not all snakes have heads."
   return snakes
-where 
+where
   completeSnake (remainingFs : List (Pos × Field)) (snake : Snake) (nextDir? : Option Dir) : MacroM $ (List (Pos × Field)) × Snake := do
     match nextDir? with
     | none => -- This case can only occur when the snake only has a head so far.
       for d in Dir.all do
-        let p := snake.tail.move d 
+        let p := snake.tail.move d
         match remainingFs.find? (·.fst == p) with
         | some (_, .snake src dst) => if d == src || d.opposite == dst then return ← completeSnake remainingFs snake d
         | _ => continue
@@ -62,24 +62,24 @@ where
     | some nextDir =>
       let p := snake.tail.move nextDir
       match remainingFs.find? (·.fst == p) with
-      | some (_, .snake src (some dst)) => 
+      | some (_, .snake src (some dst)) =>
         let mut d'? : Option Dir := none
         if      nextDir == src          then d'? := dst
         else if nextDir == dst.opposite then d'? := src.opposite
         match d'? with
-        | none => Macro.throwError s!"Invalid snake connection at {p}." 
+        | none => Macro.throwError s!"Invalid snake connection at {p}."
         | some d' =>
           let fs' := remainingFs.erase (p, .snake src dst)
           let snake' := { snake with body := snake.body ++ [p] }
           return ← completeSnake fs' snake' d'
-      | some (_, .snake dt none) => 
-        if dt == nextDir 
+      | some (_, .snake dt none) =>
+        if dt == nextDir
         then return (remainingFs.erase (p, .snake dt none), { snake .. with body := snake.body ++ [p] })
-      | _ => Macro.throwError s!"Invalid snake connection at {p}." 
-      Macro.throwError s!"Invalid snake connection at {p}." 
+      | _ => Macro.throwError s!"Invalid snake connection at {p}."
+      Macro.throwError s!"Invalid snake connection at {p}."
 
 def Game.fromFields (fs : List (List Field)) : MacroM Game := do
-  let posFields : List (Pos × Field) := 
+  let posFields : List (Pos × Field) :=
     (fs.reverse.enum.map λ (y, row) => row.enum.map λ (x, f) => (⟨x, y + 1⟩, f)) -- +1 so that water level is 0
       |> List.join
       |> List.filter λ (_, f) => match f with | .air => false | _ => true
@@ -132,13 +132,13 @@ def fieldFromSyntax : Syntax → MacroM (List Field)
   | `(map_field| ╹) => return [.snake down  none]
   | `(map_field| ╸) => return [.snake right none]
   | `(map_field| ╺) => return [.snake left  none]
-  | `(map_field| $n:num) => 
-    match n.isNatLit? with
+  | `(map_field| $n:num) =>
+    match Syntax.isNatLit? n with
     | none => Macro.throwError "Unknown map field."
-    | some n => 
-      if n < 10 
+    | some n =>
+      if n < 10
       then return n.digits.map .head
-      else Macro.throwError "Sneak heads have to be single digits." 
+      else Macro.throwError "Sneak heads have to be single digits."
   | _ => Macro.throwError "Unknown map field."
 
 def fieldRowFromSyntax : Syntax → MacroM (List Field)
@@ -147,7 +147,7 @@ def fieldRowFromSyntax : Syntax → MacroM (List Field)
   | _ => Macro.throwError "Unknown map row."
 
 instance : Quote Int where
-  quote (i : Int) := 
+  quote (i : Int) :=
     match i with
     | Int.ofNat n   => Unhygienic.run `(Int.ofNat $(quote n))
     | Int.negSucc n => Unhygienic.run `(Int.negSucc $(quote n))
@@ -168,6 +168,7 @@ macro_rules
   | `($rows:map_row* $water:water_field*) => do
   let fields ← Array.mapM fieldRowFromSyntax rows
   let waterLength := water.size
-  unless fields.all (·.length == waterLength) 
+  unless fields.all (·.length == waterLength)
     do Macro.throwError "All rows must have the same length."
-  return quote (← Game.fromFields fields.data)
+  let game ← Game.fromFields fields.data
+  return quote (k := `term) game
