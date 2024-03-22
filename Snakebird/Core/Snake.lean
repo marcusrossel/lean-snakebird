@@ -3,14 +3,14 @@ import Snakebird.Core.Basic
 structure Snake where
   head : Pos
   body : List Pos
-deriving BEq, Inhabited
+deriving DecidableEq, Inhabited
 
 namespace Snake
 
-def positions (s : Snake) : List Pos := 
+def positions (s : Snake) : List Pos :=
   s.head :: s.body
 
-def tail (s : Snake) : Pos := 
+def tail (s : Snake) : Pos :=
   s.positions.getLast (by simp [positions])
 
 def move (s : Snake) (d : Dir) : Snake := {

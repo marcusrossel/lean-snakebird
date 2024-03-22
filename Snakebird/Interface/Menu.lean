@@ -7,10 +7,10 @@ def banner := "  _                                        _        _     _      
 def commandPalette := "\n---------------------------\n\n    w : move selection up\n    s : move selection down\nENTER : select"
 
 inductive Selection
-  | exit 
+  | exit
   | instructions
   | level (idx : Nat)
-deriving BEq
+deriving DecidableEq
 
 def Selection.next : Selection → Selection
   | exit => .instructions
@@ -42,7 +42,7 @@ def refreshDisplay (selection : Selection) : IO Unit := do
   for levelIdx in [0:levels.length] do
     IO.println <| (if selection == .level levelIdx then "> " else "  ") ++ s!"Level {levelIdx}"
   IO.println commandPalette
-  IO.print "\nCommand: " 
+  IO.print "\nCommand: "
 
 partial def menu (selection : Selection := .exit) : IO Selection := do
   refreshDisplay selection
