@@ -16,8 +16,8 @@ def Dir.opposite : Dir → Dir
   | left  => right
 
 structure Pos where
-  x : Int
-  y : Int
+  x : Nat
+  y : Nat
   deriving DecidableEq, Inhabited
 
 def Pos.move (p : Pos) : Dir → Pos
@@ -27,9 +27,7 @@ def Pos.move (p : Pos) : Dir → Pos
   | .left  => { p with x := p.x - 1 }
 
 def Pos.isNeighbor (p₁ p₂ : Pos) : Bool :=
-  let Δx := (p₁.x - p₂.x).natAbs
-  let Δy := (p₁.y - p₂.y).natAbs
-  Δx + Δy == 1
+  (p₁.x.dist p₂.x) + (p₁.y.dist p₂.y) == 1
 
 instance : ToString Pos where
   toString p := s!"⟨{p.x}, {p.y}⟩"

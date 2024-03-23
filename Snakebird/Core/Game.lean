@@ -13,10 +13,10 @@ namespace Game
 def isSnakePos (g : Game) (p : Pos) : Bool :=
   g.snakes.any (·.positions.contains p)
 
-def floatingSnakes (g : Game) : List Nat :=
+def floatingSnakes (g : Game) : List (Nat × Snake) :=
   let allSnakes := g.snakes.enum
   let initFloating := allSnakes.filter fun (_, s) => !s.below.any g.map.isStablePos
-  transitivelyFloating allSnakes initFloating |>.map Prod.fst
+  transitivelyFloating allSnakes initFloating
 where
   transitivelyFloating (all floating : List (Nat × Snake)) : List (Nat × Snake) :=
     let stableSnakes := all.filterMap fun (i, s) =>
@@ -32,9 +32,11 @@ where
       cases hs : newStable <;> simp_all [hs]
       case cons hd' tl' =>
         simp_arith [List.diff']
-        apply Nat.le_trans <| List.diff_length_le (@List.erase _ instBEq (hd :: tl) hd') tl'
-        have h := List.mem_filter.mp (hs.symm ▸ List.mem_cons_self hd' tl') |>.left
-        simp [@List.length_erase_of_mem _ instBEq instLawfulBEq _ _ h]
+        have h₀ := List.diff_length_le (@List.erase _ instBEq (hd :: tl) hd') tl'
+        have h₁ := hs.symm ▸ List.mem_cons_self hd' tl'
+        have h₂ := (List.mem_filter.mp h₁).left
+        have h₃ := List.length_erase_of_mem' h₂
+        exact Nat.le_trans h₀ (by simp [h₃])
 
 def isCompleted (g : Game) : Bool :=
   g.map.fruit.isEmpty && g.snakes.isEmpty

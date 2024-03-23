@@ -53,20 +53,20 @@ def Map.fields (m : Map) : List (Pos × Field) :=
   m.saws.map ((·, Field.saw))
 
 def Game.fields (g : Game) : Array (Array Field) := Id.run do
-  let allFields := g.map.fields ++ (g.snakes.enum.map λ (i, s) => s.fields i).join
+  let allFields := g.map.fields ++ (g.snakes.enum.map fun (i, s) => s.fields i).join
   let minX := allFields.map (·.fst.x) |>.minimum?.get!
   let maxX := allFields.map (·.fst.x) |>.maximum?.get! |> (· + 2)
   let maxY := allFields.map (·.fst.y) |>.maximum?.get! |> (· + 1)
-  let xRange := (maxX - minX).natAbs + 1
-  let yRange := maxY.natAbs
-  let xs := List.range xRange |>.map λ n => (Int.ofNat n) + minX
-  let ys := List.range yRange |>.map (Int.ofNat · + 1)
+  let xRange := (maxX.dist minX) + 1
+  let yRange := maxY
+  let xs := List.range xRange |>.map (· + minX)
+  let ys := List.range yRange |>.map (· + 1)
   let mut rows : Array (Array Field) := #[Array.repeat .water xRange]
   for y in ys do
     let mut row : Array Field := #[]
     for x in xs do
       match allFields.find? (·.fst == ⟨x - 1, y⟩) with
-      | none => row := row ++ [Field.air]
+      | none        => row := row ++ [Field.air]
       | some (_, f) => row := row ++ [f]
     rows := rows ++ [row]
   return rows.reverse

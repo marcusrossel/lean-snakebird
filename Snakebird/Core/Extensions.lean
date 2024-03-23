@@ -1,10 +1,10 @@
 import Std.Data.List.Lemmas
 
+def Nat.dist (n m : Nat) : Nat :=
+  if n > m then n - m else m - n
+
 def Array.repeat (a : α) (n : Nat) : Array α :=
   List.replicate n a |>.toArray
-
-def List.isUnique [BEq α] (l : List α) : Bool :=
-  l.length == l.eraseDups.length
 
 def List.diff' [DecidableEq α] (l₁ l₂ : List α) : List α :=
   @List.diff _ instBEq l₁ l₂
@@ -16,6 +16,10 @@ theorem List.diff_length_le [DecidableEq α] (l₁ l₂ : List α) :
     split
     case inr   => apply hi
     case inl h => apply Nat.le_trans (hi ..); simp [List.length_erase_of_mem h]
+
+theorem List.length_erase_of_mem' [DecidableEq α] {a : α} {l : List α} (h : a ∈ l) :
+    length (l.erase a) = Nat.pred (length l) :=
+  List.length_erase_of_mem h
 
 instance instLawfulBEq [DecidableEq α] : @LawfulBEq α instBEq where
   eq_of_beq := by simp_all

@@ -23,11 +23,11 @@ def Map.fromFields (fields : List (Pos × Field)) : MacroM Map := do
 -- TODO: Clean up
 
 partial def Game.snakesFromFields (fs : List (Pos × Field)) : MacroM (List Snake) := do
-  let mut heads : List (Pos × Nat) := fs.filterMap λ (p, f) => match f with | .head n => (p, n) | _ => none
+  let mut heads : List (Pos × Nat) := fs.filterMap fun (p, f) =>
+    match f with | .head n => (p, n) | _ => none
   let headIDs := heads.map Prod.snd
-  unless headIDs.isUnique
-    do Macro.throwError "Duplicate snake ID."
-  unless headIDs.all λ h => h ≥ 0 ∧ h ≤ 9
+  unless headIDs.Nodup do Macro.throwError "Duplicate snake ID."
+  unless headIDs.all fun h => h ≥ 0 ∧ h ≤ 9
     do Macro.throwError "Invalid snake ID (has to be single digit)."
   let mut remainingFs : List (Pos × Field) := fs
   let mut snakes : List Snake := []
@@ -43,7 +43,7 @@ partial def Game.snakesFromFields (fs : List (Pos × Field)) : MacroM (List Snak
   -- Check that snake heads started at 0 and had no gaps.
   unless heads.isEmpty do Macro.throwError "Snake heads need to be numbered from 0."
   -- Check that there are no remaining snake parts (no snake is headless).
-  unless remainingFs.all λ (_, f) =>
+  unless remainingFs.all fun (_, f) =>
     match f with
     | .snake .. => false
     | _ => true
@@ -80,9 +80,9 @@ where
 
 def Game.fromFields (fs : List (List Field)) : MacroM Game := do
   let posFields : List (Pos × Field) :=
-    (fs.reverse.enum.map λ (y, row) => row.enum.map λ (x, f) => (⟨x, y + 1⟩, f)) -- +1 so that water level is 0
+    (fs.reverse.enum.map fun (y, row) => row.enum.map fun (x, f) => (⟨x, y + 1⟩, f)) -- +1 so that water level is 0
       |> List.join
-      |> List.filter λ (_, f) => match f with | .air => false | _ => true
+      |> List.filter fun (_, f) => match f with | .air => false | _ => true
   let map ← Map.fromFields posFields
   let snakes ← Game.snakesFromFields posFields
   return { map := map, snakes := snakes }
@@ -145,12 +145,6 @@ def fieldRowFromSyntax : Syntax → MacroM (List Field)
   | `(map_row|$first:map_field$fields:map_field*
     ) => return (← Array.mapM fieldFromSyntax (#[first] ++ fields)).data.join
   | _ => Macro.throwError "Unknown map row."
-
-instance : Quote Int where
-  quote (i : Int) :=
-    match i with
-    | Int.ofNat n   => Unhygienic.run `(Int.ofNat $(quote n))
-    | Int.negSucc n => Unhygienic.run `(Int.negSucc $(quote n))
 
 instance : Quote Pos where
   quote (p : Pos) := Unhygienic.run `(Pos.mk $(quote p.x) $(quote p.y))
