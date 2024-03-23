@@ -18,5 +18,4 @@ def level8 :=
 To run the game:
 
 1. Clone this repository.
-2. Run `lake build`.
-3. Run `./build/bin/snakebird`.
+2. Run `lake exec snakebird`.
