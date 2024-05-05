@@ -6,7 +6,7 @@ structure Map where
   fruit : List Pos
   saws  : List Pos
   -- Water level is at y = 0.
-deriving Inhabited
+  deriving Inhabited
 
 namespace Map
 
@@ -14,7 +14,7 @@ namespace Map
 def isStablePos (m : Map) (p : Pos) : Bool :=
   (m.rocks ++ m.fruit).contains p
 
-def goalIsUnlocked (m : Map) : Bool := 
+def goalIsUnlocked (m : Map) : Bool :=
   m.fruit.isEmpty
 
 end Map

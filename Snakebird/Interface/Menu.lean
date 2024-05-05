@@ -10,7 +10,7 @@ inductive Selection
   | exit
   | instructions
   | level (idx : Nat)
-deriving DecidableEq
+  deriving DecidableEq
 
 def Selection.next : Selection → Selection
   | exit => .instructions

@@ -27,12 +27,12 @@ where
   termination_by floating.length
   decreasing_by
     simp_wf
-    cases floating <;> simp [List.isEmpty] at *
+    cases floating <;> simp (config := { zetaDelta := true }) [List.isEmpty] at *
     case cons hd tl h =>
-      cases hs : newStable <;> simp_all [hs]
+      cases hs : newStable <;> simp_all (config := { zetaDelta := true }) [hs]
       case cons hd' tl' =>
-        simp_arith [List.diff']
-        have h₀ := List.diff_length_le (@List.erase _ instBEq (hd :: tl) hd') tl'
+        simp_arith [List.diff', @List.diff_cons _ instBEqOfDecidableEq instLawfulBEq ..]
+        have h₀ := List.diff_length_le (@List.erase _ instBEqOfDecidableEq (hd :: tl) hd') tl'
         have h₁ := hs.symm ▸ List.mem_cons_self hd' tl'
         have h₂ := (List.mem_filter.mp h₁).left
         have h₃ := List.length_erase_of_mem' h₂

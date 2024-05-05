@@ -25,7 +25,7 @@ def State.fromGame (game : Game) (levelNumber : Nat) : State := {
     moves := []
   }
 }
-  
+
 inductive SnakeSelection
   | next
   | idx (idx : Nat)
@@ -33,9 +33,9 @@ inductive SnakeSelection
 inductive Command
   | move (dir : Dir)
   | selectSnake (sel : SnakeSelection)
-  | undo 
-  | restart 
-  | exit 
+  | undo
+  | restart
+  | exit
 
 def Command.fromString (s : String) : Option Command :=
   match s.toNat? with
@@ -63,24 +63,24 @@ def refreshDisplay (state : State) : IO Unit := do
   IO.print "Command: "
 
 def performMove (state : State) (dir : Dir) : State :=
-  let move : Move := { dir := dir, snakeIdx := state.selectedSnake } 
+  let move : Move := { dir := dir, snakeIdx := state.selectedSnake }
   match state.game.move move with
-  | .success game => 
+  | .success game =>
     let history := { state.history with moves := state.history.moves ++ [move] }
     { state with game := game, history := history }
-  | .failure errors => 
+  | .failure errors =>
     let message := errors.map toString |>.foldl (init := "") (· ++ s!"{·}\n")
     { state with errorMessage := message }
 
 def performUndo (state : State) : State :=
-  if state.history.moves.isEmpty then { state with errorMessage := "Nothing to undo.\n" } else 
+  if state.history.moves.isEmpty then { state with errorMessage := "Nothing to undo.\n" } else
     let moves := state.history.moves.dropLast
     let game := apply state.history.initialGame moves
     { state with game := game, history := { state.history with moves := moves } }
-where 
+where
   apply (game : Game) : List Move → Game
   | [] => game
-  | move :: remaining => 
+  | move :: remaining =>
     match game.move move with
     | .failure _ => panic! "Replay of move history failed."
     | .success game' => apply game' remaining
@@ -90,7 +90,7 @@ def performSnakeSelection (state : State) : SnakeSelection → State
   | .idx idx => { state with selectedSnake := idx }
 
 def performRestart (state : State) : State :=
-  { state with 
+  { state with
     game := state.history.initialGame,
     selectedSnake := 0,
     history := { state.history with moves := [] }
@@ -106,5 +106,5 @@ partial def play (state : State) : IO Unit := do
   | some .undo =>              state := performUndo state
   | some .restart =>           state := performRestart state
   | some .exit =>              return
-  | none =>                    _ := 0 -- noop    
+  | none =>                    _ := 0 -- noop
   play state

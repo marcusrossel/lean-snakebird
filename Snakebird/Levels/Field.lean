@@ -9,41 +9,39 @@ inductive Field
   | fruit
   | snake (src : Dir) (dst : Option Dir)
   | head (idx : Nat)
-deriving DecidableEq, Inhabited
+  deriving DecidableEq, Inhabited
 
 open Dir in
 instance : ToString Field where
   toString
-  | .air => "·"
-  | .rock => "▦"
-  | .water => "~"
-  | .saw => "✸"
-  | .goal => "◎"
-  | .fruit => "*"
+  | .air                                     => "·"
+  | .rock                                    => "▦"
+  | .water                                   => "~"
+  | .saw                                     => "✸"
+  | .goal                                    => "◎"
+  | .fruit                                   => "*"
   | .snake up    up    | .snake down  down   => "┃"
   | .snake left  left  | .snake right right  => "━"
   | .snake up    right | .snake left  down   => "┏"
   | .snake down  right | .snake left  up     => "┗"
   | .snake right down  | .snake up    left   => "┓"
   | .snake right up    | .snake down  left   => "┛"
-  | .snake up    none => "╻"
-  | .snake down  none => "╹"
-  | .snake left  none => "╺"
-  | .snake right none => "╸"
-  | .head idx => s!"{idx}"
-  | .snake .. => panic! "Invalid snake field."
+  | .snake up    none                        => "╻"
+  | .snake down  none                        => "╹"
+  | .snake left  none                        => "╺"
+  | .snake right none                        => "╸"
+  | .head idx                                => s!"{idx}"
+  | .snake ..                                => panic! "Invalid snake field."
 
 def Snake.fields (s : Snake) (idx : Nat) : List (Pos × Field) := Id.run do
   let mut fields : List (Pos × Field) := [(s.head, .head idx)]
   for (idx, pos) in s.body.enum do
     let pred := fields.getLast!.fst
     let mut srcDir := Dir.all.filter (pred.move · == pos) |>.getLast! -- This is a singleton.
-    match s.body.get? (idx + 1) with
-    | some succ =>
-      let dstDir := Dir.all.filter (pos.move · == succ) |>.getLast! -- This is a singleton.
-      fields := fields ++ [(pos, .snake srcDir dstDir)]
-    | none =>
-      fields := fields ++ [(pos, .snake srcDir none)]
+    let mut dstDir := none
+    if let some succ := s.body.get? (idx + 1) then
+      dstDir := Dir.all.filter (pos.move · == succ) |>.getLast! -- This is a singleton.
+    fields := fields ++ [(pos, .snake srcDir dstDir)]
   return fields
 
 def Map.fields (m : Map) : List (Pos × Field) :=

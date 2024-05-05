@@ -25,14 +25,13 @@ where
   termination_by candidates.length
   decreasing_by
     simp_wf
-    cases candidates <;> simp [List.isEmpty] at *
+    cases candidates <;> simp (config := { zetaDelta := true }) [List.isEmpty] at *
     case cons hd tl h =>
-      cases ha : affected <;> simp_all [ha]
+      cases hs : affected <;> simp_all (config := { zetaDelta := true }) [hs]
       case cons hd' tl' =>
-        simp_arith
-        simp_arith [List.diff']
-        have h₀ := List.diff_length_le (@List.erase _ instBEq (hd :: tl) hd') tl'
-        have h₁ := ha.symm ▸ List.mem_cons_self hd' tl'
+        simp_arith [List.diff', @List.diff_cons _ instBEqOfDecidableEq instLawfulBEq ..]
+        have h₀ := List.diff_length_le (@List.erase _ instBEqOfDecidableEq (hd :: tl) hd') tl'
+        have h₁ := hs.symm ▸ List.mem_cons_self hd' tl'
         have h₂ := (List.mem_filter.mp h₁).left
         have h₃ := List.length_erase_of_mem' h₂
         exact Nat.le_trans h₀ (by simp [h₃])

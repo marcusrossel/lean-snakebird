@@ -115,36 +115,34 @@ syntax map_field (noWs map_field)* linebreak : map_row
 syntax water_field+ : water_row
 syntax:max map_row+ water_row : term
 
-open Dir in
-def fieldFromSyntax : Syntax → MacroM (List Field)
-  | `(map_field| •) => return [.air]
-  | `(map_field| ▦) => return [.rock]
-  | `(map_field| ✸) => return [.saw]
-  | `(map_field| ◎) => return [.goal]
-  | `(map_field| *) => return [.fruit]
-  | `(map_field| ┃) => return [.snake up    up]
-  | `(map_field| ━) => return [.snake right right]
-  | `(map_field| ┏) => return [.snake up    right]
-  | `(map_field| ┗) => return [.snake down  right]
-  | `(map_field| ┓) => return [.snake right down]
-  | `(map_field| ┛) => return [.snake right up]
-  | `(map_field| ╻) => return [.snake up    none]
-  | `(map_field| ╹) => return [.snake down  none]
-  | `(map_field| ╸) => return [.snake right none]
-  | `(map_field| ╺) => return [.snake left  none]
-  | `(map_field| $n:num) =>
-    match Syntax.isNatLit? n with
-    | none => Macro.throwError "Unknown map field."
-    | some n =>
-      if n < 10
-      then return n.digits.map .head
-      else Macro.throwError "Sneak heads have to be single digits."
-  | _ => Macro.throwError "Unknown map field."
+open Field Dir in
+def parseMapField : TSyntax `map_field → MacroM (List Field)
+  | `(map_field| •)      => return [.air]
+  | `(map_field| ▦)      => return [.rock]
+  | `(map_field| ✸)      => return [.saw]
+  | `(map_field| ◎)      => return [.goal]
+  | `(map_field| *)      => return [.fruit]
+  | `(map_field| ┃)      => return [.snake up    up   ]
+  | `(map_field| ━)      => return [.snake right right]
+  | `(map_field| ┏)      => return [.snake up    right]
+  | `(map_field| ┗)      => return [.snake down  right]
+  | `(map_field| ┓)      => return [.snake right down ]
+  | `(map_field| ┛)      => return [.snake right up   ]
+  | `(map_field| ╻)      => return [.snake up    none ]
+  | `(map_field| ╹)      => return [.snake down  none ]
+  | `(map_field| ╸)      => return [.snake right none ]
+  | `(map_field| ╺)      => return [.snake left  none ]
+  | `(map_field| $n:num) => return n.getNat.digits.map Field.head -- TODO: This breaks for `01`.
+  | _                    => unreachable!
 
-def fieldRowFromSyntax : Syntax → MacroM (List Field)
+def parseMapRow : TSyntax `map_row → MacroM (List Field)
   | `(map_row|$first:map_field$fields:map_field*
-    ) => return (← Array.mapM fieldFromSyntax (#[first] ++ fields)).data.join
-  | _ => Macro.throwError "Unknown map row."
+    ) => do
+      let mut row ← parseMapField first
+      for field in fields do
+        row := row ++ (← parseMapField field)
+      return row
+  | _ => unreachable!
 
 instance : Quote Pos where
   quote (p : Pos) := Unhygienic.run `(Pos.mk $(quote p.x) $(quote p.y))
@@ -158,9 +156,8 @@ instance : Quote Map where
 instance : Quote Game where
   quote (g : Game) := Unhygienic.run `(Game.mk $(quote g.map) $(quote g.snakes))
 
-macro_rules
-  | `($rows:map_row* $water:water_field*) => do
-  let fields ← Array.mapM fieldRowFromSyntax rows
+macro rows:map_row* water:water_field+ : term => do
+  let fields ← Array.mapM parseMapRow rows
   let waterLength := water.size
   unless fields.all (·.length == waterLength)
     do Macro.throwError "All rows must have the same length."

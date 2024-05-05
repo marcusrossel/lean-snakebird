@@ -4,7 +4,9 @@ structure Move where
   snakeIdx : Nat
   dir      : Dir
 
-inductive Move.Error.Kind
+namespace Move
+
+inductive Error.Kind
   | unknownSnake
   | blockedByRock
   | blockedBySaw
@@ -13,7 +15,7 @@ inductive Move.Error.Kind
   | fellInWater
   | fellOnSaw
 
-structure Move.Error where
+structure Error where
   snakeIdx : Nat
   kind     : Error.Kind
 
@@ -31,7 +33,7 @@ instance : ToString Move.Error where
     | .fellInWater               => s!"Invalid move: Snake {e.snakeIdx} would fall into the water."
     | .fellOnSaw                 => s!"Invalid move: Snake {e.snakeIdx} would fall onto a saw."
 
-inductive Move.Result
+inductive Result
   | success (g : Game)
   | failure (e : List Move.Error)
   deriving Inhabited
